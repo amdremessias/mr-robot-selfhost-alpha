@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:latest
+    platform: linux/amd64
+    command: redis-server --requirepass slipknot
+    environment:
+      REDIS_USER: default
+      REDIS_PASSWORD: slipknot
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: postgres:latest
+    platform: linux/amd64
+    environment:
+      POSTGRES_USER: slipknot
+      POSTGRES_PASSWORD: slipknot
+      POSTGRES_DB: slipknot
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  waha:
+    image: devlikeapro/waha:latest
+    platform: linux/amd64
+    environment:
+      WHATSAPP_HOOK_URL: http://host.docker.internal:5678/webhook/webhook
+      WHATSAPP_DEFAULT_ENGINE: GOWS
+      WHATSAPP_HOOK_EVENTS: message
+    volumes:
+      - waha_sessions:/app/.sessions
+      - waha_media:/app/.media
+    ports:
+      - "3000:3000"
+  # ... (outros serviços como redis, postgres, waha) ...
+
+  n8n:
+    image: n8nio/n8n:latest
+    platform: linux/amd64
+    environment:
+      # ... (suas variáveis de ambiente existentes para n8n) ...
+      # Altere WEBHOOK_URL e N8N_HOST para usar HTTPS e o IP/nome de host local
+      WEBHOOK_URL: http://host.docker.internal:5678 # Use seu IP local ou o nome do host interno
+      N8N_HOST: host.docker.internal              # Use seu IP local ou o nome do host interno
+      GENERIC_TIMEZONE: America/Sao_Paulo
+      N8N_LOG_LEVEL: debug
+      N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE: "true"
+      N8N_SECURE_COOKIE: "false" #Ignora cnx sem ssl 
+      # Novas variáveis de ambiente para SSL:
+      #N8N_PROTOCOL: https
+      #N8N_SSL_CERT: /etc/ssl/n8n_local/n8n_local.crt # Caminho do certificado dentro do contêiner
+      #N8N_SSL_KEY: /etc/ssl/n8n_local/n8n_local.key   # Caminho da chave dentro do contêiner
+    volumes:
+      - n8n_data:/home/node/.n8n
+      # Mapeamento dos certificados autoassinados do host para o contêiner:
+      # Certifique-se de que o caminho do host esteja correto para onde você gerou os arquivos!
+      # /opt/robot/ssl/n8n_ssl_local/n8n_local.crt:/etc/ssl/n8n_local/n8n_local.crt:ro
+      # /opt/robot/ssl/n8n_ssl_local/n8n_local.key:/etc/ssl/n8n_local/n8n_local.key:ro
+    ports:
+      - "5678:5678"
+
+volumes:
+  pgdata:
+  waha_sessions:
+  waha_media:
+  n8n_data:
